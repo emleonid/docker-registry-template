@@ -697,6 +697,9 @@ export_acl() {
     echo "" >> "$export_file"
     
     while IFS=: read -r username _; do
+        # Skip empty lines
+        [ -z "$username" ] && continue
+        
         if has_acl_entry "$username"; then
             echo "User: $username" >> "$export_file"
             local role=$(grep -A 1 "^  $username:" "$ACL_FILE" | grep "role:" | sed 's/.*role: //' | tr -d ' ')
