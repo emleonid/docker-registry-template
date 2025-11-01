@@ -322,13 +322,19 @@ add_repository_permission() {
     while IFS= read -r line; do
         echo "$line" >> "$temp_file"
         
-        if [[ "$line" =~ ^[[:space:]]*$username: ]]; then
+        # Check if this is the target user
+        if [[ "$line" =~ ^[[:space:]]{2}$username: ]]; then
             in_user=1
+        # Check if this is a different user (reset in_user to prevent adding to wrong user)
+        elif [[ "$line" =~ ^[[:space:]]{2}[a-zA-Z0-9_-]+: ]] && [ $in_user -eq 1 ]; then
+            in_user=0
+        # Add repository if we're in the target user's section and found repositories line
         elif [ $in_user -eq 1 ] && [[ "$line" =~ ^[[:space:]]*repositories:[[:space:]]*\[\]?$ ]]; then
             echo "      - name: \"$repo_name\"" >> "$temp_file"
             echo "        actions: $actions" >> "$temp_file"
             added=1
             in_user=0
+        # Reset if we found an existing repository (for appending after existing repos)
         elif [ $in_user -eq 1 ] && [[ "$line" =~ ^[[:space:]]*-[[:space:]]name: ]]; then
             in_user=0
         fi
