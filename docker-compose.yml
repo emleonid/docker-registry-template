@@ -1,0 +1,100 @@
+services:
+  # Redis cache for R2 storage
+  redis:
+    image: redis:7-alpine
+    container_name: registry-redis
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - registry-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Main Docker Registry with R2 storage
+  registry:
+    image: registry:2
+    container_name: docker-registry
+    restart: always
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      # Authentication
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_HTTP_SECRET: ${REGISTRY_HTTP_SECRET}
+
+      # Cloudflare R2 Storage (S3-compatible)
+      REGISTRY_STORAGE: s3
+      REGISTRY_STORAGE_S3_ACCESSKEY: ${R2_ACCESS_KEY_ID}
+      REGISTRY_STORAGE_S3_SECRETKEY: ${R2_SECRET_ACCESS_KEY}
+      REGISTRY_STORAGE_S3_REGION: auto
+      REGISTRY_STORAGE_S3_REGIONENDPOINT: ${R2_ENDPOINT}
+      REGISTRY_STORAGE_S3_BUCKET: ${R2_BUCKET}
+      REGISTRY_STORAGE_S3_ENCRYPT: "true"
+      REGISTRY_STORAGE_S3_SECURE: "true"
+      REGISTRY_STORAGE_S3_V4AUTH: "true"
+      REGISTRY_STORAGE_S3_CHUNKSIZE: "5242880"
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+
+      # Redis cache
+      REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: redis
+      REGISTRY_REDIS_ADDR: redis:6379
+      REGISTRY_REDIS_DB: 0
+
+      # HTTP configuration
+      REGISTRY_HTTP_ADDR: 0.0.0.0:5000
+      REGISTRY_HTTP_HOST: https://${REGISTRY_DOMAIN}
+
+      # Health check configuration
+      REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: "true"
+      REGISTRY_HEALTH_STORAGEDRIVER_INTERVAL: 10s
+      REGISTRY_HEALTH_STORAGEDRIVER_THRESHOLD: 3
+    volumes:
+      - ./auth:/auth:ro
+      - ./config/registry-config.yml:/etc/docker/registry/config.yml:ro
+    networks:
+      - registry-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Fail2ban for additional security (optional but recommended)
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: registry-fail2ban
+    restart: always
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./logs/nginx:/var/log/nginx:ro
+      - ./config/fail2ban:/data
+      - /var/log:/var/log:ro
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+      - F2B_LOG_LEVEL=INFO
+      - F2B_DB_PURGE_AGE=30d
+
+networks:
+  registry-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  redis-data:

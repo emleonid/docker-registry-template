@@ -1,0 +1,93 @@
+version: 0.1
+log:
+  level: info
+  formatter: text
+  fields:
+    service: registry
+    environment: production
+
+storage:
+  s3:
+    accesskey: ${R2_ACCESS_KEY_ID}
+    secretkey: ${R2_SECRET_ACCESS_KEY}
+    region: auto
+    regionendpoint: ${R2_ENDPOINT}
+    bucket: ${R2_BUCKET}
+    encrypt: true
+    secure: true
+    v4auth: true
+    chunksize: 5242880
+    rootdirectory: /
+  delete:
+    enabled: true
+  cache:
+    blobdescriptor: redis
+  redirect:
+    disable: false
+  maintenance:
+    uploadpurging:
+      enabled: true
+      age: 168h
+      interval: 24h
+      dryrun: false
+    readonly:
+      enabled: false
+
+# Redis cache for improved performance with R2
+redis:
+  addr: redis:6379
+  password: ""
+  db: 0
+  dialtimeout: 10ms
+  readtimeout: 10ms
+  writetimeout: 10ms
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+
+http:
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+    X-Frame-Options: [DENY]
+    X-XSS-Protection: ["1; mode=block"]
+    Strict-Transport-Security: ["max-age=31536000; includeSubDomains"]
+  debug:
+    addr: :5001
+    prometheus:
+      enabled: true
+      path: /metrics
+
+auth:
+  htpasswd:
+    realm: Docker Registry
+    path: /auth/htpasswd
+
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+
+# Catalog configuration for listing repositories
+catalog:
+  maxentries: 5000
+
+# Validation for manifest uploads
+validation:
+  manifests:
+    urls:
+      allow:
+        - ^https?://
+
+# Notifications can be configured here for webhooks
+# notifications:
+#   endpoints:
+#     - name: webhook
+#       url: https://your-webhook-url.com
+#       headers:
+#         Authorization: [Bearer <token>]
+#       timeout: 1s
+#       threshold: 5
+#       backoff: 1s

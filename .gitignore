@@ -1,0 +1,32 @@
+# Environment variables (contains secrets!)
+.env
+.env.bak
+
+# Authentication files (contains user passwords!)
+auth/htpasswd
+auth/htpasswd.bak
+auth/htpasswd.tmp
+
+# Logs
+logs/
+*.log
+
+# Backups
+*.bak
+*.backup
+*.tar.gz
+
+# System files
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Fail2ban data
+config/fail2ban/*.sqlite
+config/fail2ban/*.sqlite3
+
+# Temporary files
+*.tmp
+temp/
