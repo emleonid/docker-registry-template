@@ -109,6 +109,9 @@ list_users() {
     if [ -s "$HTPASSWD_FILE" ]; then
         local count=1
         while IFS=: read -r username _; do
+            # Skip empty lines
+            [ -z "$username" ] && continue
+            
             print_msg "$CYAN" "$count) $username"
             
             if has_acl_entry "$username"; then
