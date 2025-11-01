@@ -77,7 +77,7 @@ init_acl_file() {
 #   - developer: Can push/pull to assigned repositories
 #   - reader: Can only pull from assigned repositories
 
-users: {}
+users:
 EOF
         print_msg "$GREEN" "✓ ACL file created"
     fi
@@ -322,11 +322,12 @@ add_repository_permission() {
     while IFS= read -r line; do
         echo "$line" >> "$temp_file"
         
-        # Check if this is the target user
-        if [[ "$line" =~ ^[[:space:]]{2}$username: ]]; then
+        # Check if this is the target user (escape special regex chars in username)
+        local escaped_username=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
+        if [[ "$line" =~ ^[[:space:]]{2}${escaped_username}: ]]; then
             in_user=1
         # Check if this is a different user (reset in_user to prevent adding to wrong user)
-        elif [[ "$line" =~ ^[[:space:]]{2}[a-zA-Z0-9_-]+: ]] && [ $in_user -eq 1 ]; then
+        elif [[ "$line" =~ ^[[:space:]]{2}[^[:space:]][^:]+: ]] && [ $in_user -eq 1 ]; then
             in_user=0
         # Add repository if we're in the target user's section and found repositories line
         elif [ $in_user -eq 1 ] && [[ "$line" =~ ^[[:space:]]*repositories:[[:space:]]*\[\]?$ ]]; then
@@ -345,9 +346,11 @@ add_repository_permission() {
         local repo_line=$(tail -n +$line_num "$ACL_FILE" | grep -n "repositories:" | head -1 | cut -d: -f1)
         
         if [ -n "$repo_line" ]; then
-            awk -v user="$username" -v repo="$repo_name" -v acts="$actions" '
+            # Escape username for AWK regex
+            local escaped_user=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
+            awk -v user="$escaped_user" -v repo="$repo_name" -v acts="$actions" '
                 BEGIN { in_user=0; last_repo_line=0 }
-                /^  [a-z]/ { if (in_user && last_repo_line > 0) { 
+                /^  [^ ]/ { if (in_user && last_repo_line > 0) { 
                     print "      - name: \"" repo "\"";
                     print "        actions: " acts;
                     last_repo_line=0;
@@ -405,9 +408,11 @@ remove_user() {
     
     # Remove from ACL
     if [ -f "$ACL_FILE" ] && has_acl_entry "$username"; then
-        awk -v user="$username" '
+        # Escape username for AWK regex
+        local escaped_user=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
+        awk -v user="$escaped_user" '
             BEGIN { skip=0 }
-            /^  [a-z]/ { skip=0 }
+            /^  [^ ]/ { skip=0 }
             $0 ~ "^  " user ":" { skip=1; next }
             skip == 0 { print }
         ' "$ACL_FILE" > "${ACL_FILE}.tmp" && mv "${ACL_FILE}.tmp" "$ACL_FILE"
@@ -625,15 +630,16 @@ remove_repository_permission() {
             continue
         fi
         
-        # Check if we're entering the target user's section
-        if [[ "$line" =~ ^[[:space:]]{2}$username: ]]; then
+        # Check if we're entering the target user's section (escape special regex chars in username)
+        local escaped_username=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
+        if [[ "$line" =~ ^[[:space:]]{2}${escaped_username}: ]]; then
             in_target_user=1
             echo "$line" >> "$temp_file"
             continue
         fi
         
-        # Check if we're entering a different user's section
-        if [[ "$line" =~ ^[[:space:]]{2}[a-zA-Z0-9_-]+: ]]; then
+        # Check if we're entering a different user's section (any non-space character followed by non-colon chars and colon)
+        if [[ "$line" =~ ^[[:space:]]{2}[^[:space:]][^:]+: ]]; then
             in_target_user=0
         fi
         
