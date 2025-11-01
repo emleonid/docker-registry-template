@@ -119,18 +119,35 @@ list_users() {
                 print_msg "$YELLOW" "   Role: $role"
                 
                 echo "   Repositories:"
+                local in_user=0
                 local in_repos=0
+                local escaped_username=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
+                
                 while IFS= read -r line; do
-                    if [[ "$line" =~ -[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
-                        local repo="${BASH_REMATCH[1]}"
-                        echo -n "     • $repo: "
-                        in_repos=1
-                    elif [[ "$line" =~ actions:[[:space:]](.*)$ ]] && [ $in_repos -eq 1 ]; then
-                        local actions="${BASH_REMATCH[1]}"
-                        print_msg "$GREEN" "$actions"
-                        in_repos=0
+                    # Check if we're in the target user's section
+                    if [[ "$line" =~ ^[[:space:]]{2}${escaped_username}: ]]; then
+                        in_user=1
+                        continue
                     fi
-                done < <(grep -A 20 "^  $username:" "$ACL_FILE" 2>/dev/null || echo "")
+                    
+                    # Check if we've entered a different user's section (stop processing)
+                    if [[ "$line" =~ ^[[:space:]]{2}[^[:space:]][^:]+: ]] && [ $in_user -eq 1 ]; then
+                        break
+                    fi
+                    
+                    # Only process if we're in the target user's section
+                    if [ $in_user -eq 1 ]; then
+                        if [[ "$line" =~ -[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
+                            local repo="${BASH_REMATCH[1]}"
+                            echo -n "     • $repo: "
+                            in_repos=1
+                        elif [[ "$line" =~ actions:[[:space:]](.*)$ ]] && [ $in_repos -eq 1 ]; then
+                            local actions="${BASH_REMATCH[1]}"
+                            print_msg "$GREEN" "$actions"
+                            in_repos=0
+                        fi
+                    fi
+                done < "$ACL_FILE"
             else
                 print_msg "$YELLOW" "   No ACL permissions defined"
             fi
@@ -590,15 +607,29 @@ remove_repository_permission() {
     echo "Current repositories for '$username':"
     local count=1
     local repos=()
+    local in_user=0
+    local escaped_username=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
     
     while IFS= read -r line; do
-        if [[ "$line" =~ ^[[:space:]]*-[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
+        # Check if we're in the target user's section
+        if [[ "$line" =~ ^[[:space:]]{2}${escaped_username}: ]]; then
+            in_user=1
+            continue
+        fi
+        
+        # Check if we've entered a different user's section (stop processing)
+        if [[ "$line" =~ ^[[:space:]]{2}[^[:space:]][^:]+: ]] && [ $in_user -eq 1 ]; then
+            break
+        fi
+        
+        # Only process if we're in the target user's section
+        if [ $in_user -eq 1 ] && [[ "$line" =~ ^[[:space:]]*-[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
             local repo="${BASH_REMATCH[1]}"
             repos+=("$repo")
             echo "$count) $repo"
             ((count++))
         fi
-    done < <(grep -A 20 "^  $username:" "$ACL_FILE")
+    done < "$ACL_FILE"
     
     if [ ${#repos[@]} -eq 0 ]; then
         echo "No repository permissions found"
@@ -685,18 +716,35 @@ show_user_info() {
         
         echo ""
         echo "Repository Permissions:"
+        local in_user=0
         local in_repos=0
+        local escaped_username=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
+        
         while IFS= read -r line; do
-            if [[ "$line" =~ -[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
-                local repo="${BASH_REMATCH[1]}"
-                echo -n "  • $repo: "
-                in_repos=1
-            elif [[ "$line" =~ actions:[[:space:]](.*)$ ]] && [ $in_repos -eq 1 ]; then
-                local actions="${BASH_REMATCH[1]}"
-                print_msg "$GREEN" "$actions"
-                in_repos=0
+            # Check if we're in the target user's section
+            if [[ "$line" =~ ^[[:space:]]{2}${escaped_username}: ]]; then
+                in_user=1
+                continue
             fi
-        done < <(grep -A 20 "^  $username:" "$ACL_FILE" 2>/dev/null || echo "")
+            
+            # Check if we've entered a different user's section (stop processing)
+            if [[ "$line" =~ ^[[:space:]]{2}[^[:space:]][^:]+: ]] && [ $in_user -eq 1 ]; then
+                break
+            fi
+            
+            # Only process if we're in the target user's section
+            if [ $in_user -eq 1 ]; then
+                if [[ "$line" =~ -[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
+                    local repo="${BASH_REMATCH[1]}"
+                    echo -n "  • $repo: "
+                    in_repos=1
+                elif [[ "$line" =~ actions:[[:space:]](.*)$ ]] && [ $in_repos -eq 1 ]; then
+                    local actions="${BASH_REMATCH[1]}"
+                    print_msg "$GREEN" "$actions"
+                    in_repos=0
+                fi
+            fi
+        done < "$ACL_FILE"
     else
         print_msg "$YELLOW" "No ACL permissions defined"
     fi
@@ -733,18 +781,35 @@ export_acl() {
             echo "Role: $role" >> "$export_file"
             echo "Repositories:" >> "$export_file"
             
+            local in_user=0
             local in_repos=0
+            local escaped_username=$(printf '%s\n' "$username" | sed 's/[.[\*^$()+?{|]/\\&/g')
+            
             while IFS= read -r line; do
-                if [[ "$line" =~ -[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
-                    local repo="${BASH_REMATCH[1]}"
-                    echo -n "  - $repo: " >> "$export_file"
-                    in_repos=1
-                elif [[ "$line" =~ actions:[[:space:]](.*)$ ]] && [ $in_repos -eq 1 ]; then
-                    local actions="${BASH_REMATCH[1]}"
-                    echo "$actions" >> "$export_file"
-                    in_repos=0
+                # Check if we're in the target user's section
+                if [[ "$line" =~ ^[[:space:]]{2}${escaped_username}: ]]; then
+                    in_user=1
+                    continue
                 fi
-            done < <(grep -A 20 "^  $username:" "$ACL_FILE" 2>/dev/null || echo "")
+                
+                # Check if we've entered a different user's section (stop processing)
+                if [[ "$line" =~ ^[[:space:]]{2}[^[:space:]][^:]+: ]] && [ $in_user -eq 1 ]; then
+                    break
+                fi
+                
+                # Only process if we're in the target user's section
+                if [ $in_user -eq 1 ]; then
+                    if [[ "$line" =~ -[[:space:]]name:[[:space:]]\"(.*)\" ]]; then
+                        local repo="${BASH_REMATCH[1]}"
+                        echo -n "  - $repo: " >> "$export_file"
+                        in_repos=1
+                    elif [[ "$line" =~ actions:[[:space:]](.*)$ ]] && [ $in_repos -eq 1 ]; then
+                        local actions="${BASH_REMATCH[1]}"
+                        echo "$actions" >> "$export_file"
+                        in_repos=0
+                    fi
+                fi
+            done < "$ACL_FILE"
             
             echo "" >> "$export_file"
         fi
