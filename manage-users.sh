@@ -616,14 +616,29 @@ remove_repository_permission() {
     # Remove repository entry
     local temp_file="${ACL_FILE}.tmp"
     local skip_lines=0
+    local in_target_user=0
     
     while IFS= read -r line; do
+        # Skip lines that are part of the repository to remove
         if [ $skip_lines -gt 0 ]; then
             ((skip_lines--))
             continue
         fi
         
-        if [[ "$line" =~ ^[[:space:]]*-[[:space:]]name:[[:space:]]\"$repo_to_remove\" ]]; then
+        # Check if we're entering the target user's section
+        if [[ "$line" =~ ^[[:space:]]{2}$username: ]]; then
+            in_target_user=1
+            echo "$line" >> "$temp_file"
+            continue
+        fi
+        
+        # Check if we're entering a different user's section
+        if [[ "$line" =~ ^[[:space:]]{2}[a-zA-Z0-9_-]+: ]]; then
+            in_target_user=0
+        fi
+        
+        # Only remove the repository if we're in the target user's section
+        if [ $in_target_user -eq 1 ] && [[ "$line" =~ ^[[:space:]]*-[[:space:]]name:[[:space:]]\"$repo_to_remove\" ]]; then
             skip_lines=1
             continue
         fi
