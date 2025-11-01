@@ -43,7 +43,7 @@ echo ""
 
 # Create necessary directories
 echo "Creating directory structure..."
-mkdir -p auth config/fail2ban/jail.d config/fail2ban/filter.d
+mkdir -p auth storage config/fail2ban/jail.d config/fail2ban/filter.d
 echo -e "${GREEN}✓ Directories created${NC}"
 echo ""
 

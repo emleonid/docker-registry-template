@@ -81,9 +81,9 @@ services:
       - NET_ADMIN
       - NET_RAW
     volumes:
-      - ./logs/nginx:/var/log/nginx:ro
+      - /var/log/nginx:/var/log/nginx:ro
       - ./config/fail2ban:/data
-      - /var/log:/var/log:ro
+      - ./storage/fail2ban-data:/data/db
     environment:
       - TZ=${TIMEZONE:-UTC}
       - F2B_LOG_LEVEL=INFO
@@ -98,3 +98,4 @@ networks:
 
 volumes:
   redis-data:
+  fail2ban-data:
