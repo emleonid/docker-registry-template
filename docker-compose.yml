@@ -1,21 +1,4 @@
 services:
-  # Redis cache for R2 storage
-  redis:
-    image: redis:7-alpine
-    container_name: registry-redis
-    restart: always
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis-data:/data
-    networks:
-      - registry-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-
   # Main Docker Registry with R2 storage
   registry:
     image: registry:2
@@ -40,19 +23,28 @@ services:
       REGISTRY_STORAGE_S3_ENCRYPT: "true"
       REGISTRY_STORAGE_S3_SECURE: "true"
       REGISTRY_STORAGE_S3_V4AUTH: "true"
-      REGISTRY_STORAGE_S3_CHUNKSIZE: "5242880"
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_STORAGE_S3_FORCEPATHSTYLE: "true"
+      REGISTRY_STORAGE_S3_CHUNKSIZE: "104857600"
+      REGISTRY_STORAGE_S3_MULTIPARTCOPYCHUNKSIZE: "33554432"
+      REGISTRY_STORAGE_S3_MULTIPARTCOPYMAXCONCURRENCY: "100"
+      REGISTRY_STORAGE_S3_MULTIPARTCOPYTHRESHOLDSIZE: "33554432"
+      REGISTRY_STORAGE_REDIRECT_DISABLE: "true"
+      REGISTRY_STORAGE_S3_ROOTDIRECTORY: registry-prod
 
-      # Redis cache
-      REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: redis
-      REGISTRY_REDIS_ADDR: redis:6379
-      REGISTRY_REDIS_DB: 0
+      # Cache
+      REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR: inmemory
 
       # HTTP configuration
       REGISTRY_HTTP_ADDR: 0.0.0.0:5000
       REGISTRY_HTTP_HOST: https://${REGISTRY_DOMAIN}
 
-      # Health check configuration
+      # This allows us to check health without a password
+      REGISTRY_HTTP_DEBUG_ADDR: 0.0.0.0:5001
+      REGISTRY_HTTP_DEBUG_PROMETHEUS_ENABLED: "true"
+      REGISTRY_HTTP_DEBUG_PROMETHEUS_PATH: /metrics
+
+      # Health check configuration (Internal)
       REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: "true"
       REGISTRY_HEALTH_STORAGEDRIVER_INTERVAL: 10s
       REGISTRY_HEALTH_STORAGEDRIVER_THRESHOLD: 3
@@ -65,11 +57,26 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/v2/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/v2/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Redis for caching (required by registry-config.yml)
+  redis:
+    image: redis:7-alpine
+    container_name: registry-redis
+    restart: always
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - registry-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # Fail2ban for additional security (optional but recommended)
   fail2ban:
@@ -97,5 +104,4 @@ networks:
         - subnet: 172.28.0.0/16
 
 volumes:
-  redis-data:
   fail2ban-data:
