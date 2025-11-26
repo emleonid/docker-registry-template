@@ -53,30 +53,12 @@ services:
       - ./config/registry-config.yml:/etc/docker/registry/config.yml:ro
     networks:
       - registry-network
-    depends_on:
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/v2/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # Redis for caching (required by registry-config.yml)
-  redis:
-    image: redis:7-alpine
-    container_name: registry-redis
-    restart: always
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-    networks:
-      - registry-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   # Fail2ban for additional security (optional but recommended)
   fail2ban:
