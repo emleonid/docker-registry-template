@@ -17,34 +17,21 @@ storage:
     secure: true
     v4auth: true
     chunksize: 5242880
-    rootdirectory: /
+    rootdirectory: registry-prod
   delete:
     enabled: true
   cache:
-    blobdescriptor: redis
+    blobdescriptor: inmemory
   redirect:
     disable: false
   maintenance:
     uploadpurging:
       enabled: true
-      age: 168h
+      age: 24h
       interval: 24h
       dryrun: false
     readonly:
       enabled: false
-
-# Redis cache for improved performance with R2
-redis:
-  addr: redis:6379
-  password: ""
-  db: 0
-  dialtimeout: 10ms
-  readtimeout: 10ms
-  writetimeout: 10ms
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
 
 http:
   addr: :5000
@@ -80,14 +67,3 @@ validation:
     urls:
       allow:
         - ^https?://
-
-# Notifications can be configured here for webhooks
-# notifications:
-#   endpoints:
-#     - name: webhook
-#       url: https://your-webhook-url.com
-#       headers:
-#         Authorization: [Bearer <token>]
-#       timeout: 1s
-#       threshold: 5
-#       backoff: 1s
