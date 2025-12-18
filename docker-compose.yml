@@ -22,7 +22,7 @@ services:
       REGISTRY_STORAGE_S3_BUCKET: "${R2_BUCKET}"
 
       # R2-Optimized Storage Configuration
-      REGISTRY_STORAGE_S3_ROOTDIRECTORY: "/registry-prod-data"
+      REGISTRY_STORAGE_S3_ROOTDIRECTORY: registry-prod-data
       REGISTRY_STORAGE_S3_FORCEPATHSTYLE: "true"
       REGISTRY_STORAGE_S3_SECURE: "true"
       REGISTRY_STORAGE_REDIRECT_DISABLE: "true"
