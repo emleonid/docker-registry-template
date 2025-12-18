@@ -56,10 +56,6 @@ services:
       REGISTRY_HEALTH_STORAGEDRIVER_ENABLED: "true"
       REGISTRY_HEALTH_STORAGEDRIVER_INTERVAL: "10s"
       REGISTRY_HEALTH_STORAGEDRIVER_THRESHOLD: "3"
-
-      # Enhanced logging (optional - can be removed in production)
-      REGISTRY_LOG_LEVEL: "info"
-      REGISTRY_LOG_FIELDS: "service,environment"
     volumes:
       - ./auth:/auth:ro
     networks:
