@@ -17,7 +17,7 @@ storage:
     secure: true
     v4auth: true
     chunksize: 5242880
-    rootdirectory: registry-prod
+    rootdirectory: prod-data
   delete:
     enabled: true
   cache:
