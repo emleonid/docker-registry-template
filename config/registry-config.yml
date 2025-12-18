@@ -18,12 +18,16 @@ storage:
     v4auth: true
     chunksize: 5242880
     rootdirectory: prod-data
+    forcepathstyle: true
+    multipartcopychunksize: 33554432
+    multipartcopymaxconcurrency: 100
+    multipartcopythresholdsize: 33554432
   delete:
     enabled: true
   cache:
     blobdescriptor: inmemory
   redirect:
-    disable: false
+    disable: true
   maintenance:
     uploadpurging:
       enabled: true
