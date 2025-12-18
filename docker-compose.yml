@@ -46,7 +46,7 @@ services:
     networks:
       - registry-network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/v2/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/metrics"]
       interval: 30s
       timeout: 10s
       retries: 3
