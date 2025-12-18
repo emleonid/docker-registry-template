@@ -21,6 +21,24 @@ services:
       REGISTRY_STORAGE_S3_REGIONENDPOINT: ${R2_ENDPOINT}
       REGISTRY_STORAGE_S3_BUCKET: ${R2_BUCKET}
 
+      # Cloudflare R2 Storage Configuration
+      REGISTRY_STORAGE_S3_ROOTDIRECTORY: prod-data
+      REGISTRY_STORAGE_S3_FORCEPATHSTYLE: "true"
+      REGISTRY_STORAGE_REDIRECT_DISABLE: "true"
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_STORAGE_S3_V4AUTH: "true"
+      REGISTRY_STORAGE_S3_CHUNKSIZE: "5242880"
+
+      # Cloudflare R2 Storage Multipart Copy Settings
+      REGISTRY_STORAGE_S3_MULTIPARTCOPYCHUNKSIZE: "33554432"
+      REGISTRY_STORAGE_S3_MULTIPARTCOPYMAXCONCURRENCY: "100"
+      REGISTRY_STORAGE_S3_MULTIPARTCOPYTHRESHOLDSIZE: "33554432"
+
+      # --- Cloudflare R2 Maintenance ---
+      REGISTRY_STORAGE_MAINTENANCE_UPLOADPURGING_ENABLED: "true"
+      REGISTRY_STORAGE_MAINTENANCE_UPLOADPURGING_AGE: 24h
+      REGISTRY_STORAGE_MAINTENANCE_UPLOADPURGING_INTERVAL: 24h
+
       # HTTP configuration
       REGISTRY_HTTP_ADDR: 0.0.0.0:5000
       REGISTRY_HTTP_HOST: https://${REGISTRY_DOMAIN}
@@ -36,7 +54,6 @@ services:
       REGISTRY_HEALTH_STORAGEDRIVER_THRESHOLD: 3
     volumes:
       - ./auth:/auth:ro
-      - ./config/registry-config.yml:/etc/docker/registry/config.yml:ro
     networks:
       - registry-network
     healthcheck:
